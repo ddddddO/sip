@@ -29,7 +29,7 @@ func (s *Server) AddSession(raddr string) {
 		s.ssmap[raddr] = &Session{
 			br:    nil,
 			bw:    nil,
-			state: "init",
+			state: State("init"),
 		}
 	}
 }

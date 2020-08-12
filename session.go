@@ -35,7 +35,7 @@ func NewSession(raddr string) *Session {
 		br:   bufio.NewReader(conn),
 		bw:   bufio.NewWriter(conn),
 
-		state: "init",
+		state: State("init"),
 	}
 }
 
