@@ -1,6 +1,7 @@
 package sip
 
 import (
+	"bytes"
 	"log"
 	"net"
 )
@@ -46,10 +47,40 @@ func (s *Server) Run() error {
 
 		log.Print(string(b))
 
+		if isValidINVITERequest(b) {
+			s.Conn.WriteTo([]byte("response code 2XX"), ra)
+		} else {
+			s.Conn.WriteTo([]byte("response code 4XX"), ra)
+		}
+
 		//err = s.ssmap[raddr].Write([]byte("Hello?")) // NOTE: panic: write udp 127.0.0.1:5060: write: destination address required
 		_, err = s.Conn.WriteTo([]byte("Hello?"), ra)
 		if err != nil {
 			panic(err)
 		}
 	}
+}
+
+var (
+	end    = []byte("\r\n")
+	method = []byte("INVITE")
+)
+
+// NOTE: 一旦ヘッダーが妥当かチェック
+func isValidINVITERequest(b []byte) bool {
+	requestLine := bytes.Split(b, end)[0]
+	splited := bytes.Split(requestLine, []byte(" "))
+
+	if len(splited) != 3 {
+		return false
+	}
+	// check Method
+	if !bytes.Equal(splited[0], method) {
+		return false
+	}
+	// TODO:check Request-URI
+
+	// TODO:check SIP-Version
+
+	return true
 }
