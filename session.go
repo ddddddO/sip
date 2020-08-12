@@ -17,8 +17,6 @@ type Session struct {
 	state State
 }
 
-type State string
-
 // 一旦、クライアントから接続用
 func NewSession(raddr string) *Session {
 	conn, err := net.Dial("udp4", raddr)
@@ -35,8 +33,12 @@ func NewSession(raddr string) *Session {
 		br:   bufio.NewReader(conn),
 		bw:   bufio.NewWriter(conn),
 
-		state: State("init"),
+		state: StateINIT,
 	}
+}
+
+func (ss *Session) ChangeState(state State) {
+	ss.state = state
 }
 
 func (ss *Session) Read() ([]byte, error) {

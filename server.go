@@ -30,7 +30,7 @@ func (s *Server) AddSession(raddr string) {
 		s.ssmap[raddr] = &Session{
 			br:    nil,
 			bw:    nil,
-			state: State("init"),
+			state: StateINIT,
 		}
 	}
 }
@@ -49,6 +49,7 @@ func (s *Server) Run() error {
 
 		if isValidINVITERequest(b) {
 			s.Conn.WriteTo([]byte("response code 2XX"), ra)
+			s.ssmap[raddr].ChangeState(StateOK)
 		} else {
 			s.Conn.WriteTo([]byte("response code 4XX"), ra)
 		}

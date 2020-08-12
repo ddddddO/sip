@@ -23,6 +23,7 @@ func (c *Client) AddSession(raddr string, session *Session) {
 func (c *Client) Run() error {
 	for key := range c.ssmap {
 		c.ssmap[key].Write(c.buildRequestINVITE())
+		c.ssmap[key].ChangeState(StateINVITE)
 
 		b, err := c.ssmap[key].Read()
 		if err != nil {
