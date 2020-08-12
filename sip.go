@@ -2,18 +2,28 @@ package sip
 
 import (
 	"bufio"
+	"errors"
+	"log"
 	"net"
 )
 
 //まず、クライアント・サーバ1対1で考える
 
-type Client struct {
-	conn *net.UDPConn // TODO: 接続先が複数の場合があるから、conn->connsになる？そうなるとかなり変更しそう
+// Key: remote address / Value: Session
+type SessionMap map[string]*Session
+
+type Session struct {
+	conn *net.UDPConn
 	br   *bufio.Reader
 	bw   *bufio.Writer
+
+	state State
 }
 
-func NewClient(raddr string) *Client {
+type State string
+
+// 一旦、クライアントから接続用
+func NewSession(raddr string) *Session {
 	conn, err := net.Dial("udp4", raddr)
 	if err != nil {
 		panic(err)
@@ -23,76 +33,140 @@ func NewClient(raddr string) *Client {
 		panic("can't assertion")
 	}
 
-	return &Client{
+	return &Session{
 		conn: udpConn,
 		br:   bufio.NewReader(conn),
 		bw:   bufio.NewWriter(conn),
+
+		state: "init",
 	}
 }
 
-func (c *Client) Read() ([]byte, error) {
-	size := c.br.Size()
+func (ss *Session) Read() ([]byte, error) {
+	if ss.br == nil {
+		return nil, errors.New("can't access")
+	}
+
+	size := ss.br.Size()
 	buf := make([]byte, size)
 
-	_, err := c.br.Read(buf)
+	_, err := ss.br.Read(buf)
 	if err != nil {
 		return nil, err
 	}
 	return buf, nil
 }
 
-func (c *Client) Write(b []byte) error {
-	_, err := c.bw.Write(b)
+func (ss *Session) Write(b []byte) error {
+	if ss.bw == nil {
+		return errors.New("can't access")
+	}
+	_, err := ss.bw.Write(b)
 	if err != nil {
 		return err
 	}
-	if err := c.bw.Flush(); err != nil {
+	if err := ss.bw.Flush(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Client) Close() error {
-	return c.conn.Close()
+func (ss *Session) Close() error {
+	return ss.conn.Close()
+}
+
+type Client struct {
+	ssmap SessionMap
+}
+
+func NewClient() *Client {
+	return &Client{
+		ssmap: SessionMap{},
+	}
+}
+
+func (c *Client) AddSession(raddr string, session *Session) {
+	if _, ok := c.ssmap[raddr]; !ok {
+		c.ssmap[raddr] = session
+	}
+}
+
+func (c *Client) Run() error {
+	for key := range c.ssmap {
+		c.ssmap[key].Write(c.buildRequestINVITE())
+
+		b, err := c.ssmap[key].Read()
+		if err != nil {
+			return err
+		}
+		log.Print(string(b))
+	}
+	return nil
+}
+
+// https://tools.ietf.org/html/rfc3261#section-7.1
+func (c *Client) buildRequestINVITE() []byte {
+	var b []byte
+	b = append(b, []byte("INVITE sip:bob@biloxi.com SIP/2.0\r\n")...)
+	// NOTE: ヘッダーに\r\nは必要でよい？
+	b = append(b, []byte("Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds\r\n")...)
+	b = append(b, []byte("Max-Forwards: 70\r\n")...)
+	b = append(b, []byte("To: Bob <sip:bob@biloxi.com>\r\n")...)
+	b = append(b, []byte("From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n")...)
+	b = append(b, []byte("Call-ID: a84b4c76e66710@pc33.atlanta.com\r\n")...)
+	b = append(b, []byte("CSeq: 314159 INVITE\r\n")...)
+	b = append(b, []byte("Contact: <sip:alice@pc33.atlanta.com>\r\n")...)
+	b = append(b, []byte("Content-Type: application/sdp\r\n")...)
+	b = append(b, []byte("Content-Length: 142\r\n")...)
+
+	return b
 }
 
 type Server struct {
-	conn *net.UDPConn
-	br   *bufio.Reader
-	bw   *bufio.Writer
+	Conn  *net.UDPConn
+	ssmap SessionMap
 }
 
 func NewServer(laddr string) *Server {
-	conn, err := net.ListenPacket("udp", laddr)
+	resolvedLaddr, err := net.ResolveUDPAddr("udp", laddr)
+	conn, err := net.ListenUDP("udp", resolvedLaddr)
 	if err != nil {
 		panic(err)
 	}
-	udpConn, ok := conn.(*net.UDPConn)
-	if !ok {
-		panic("can't assertion")
-	}
 
 	return &Server{
-		conn: udpConn,
-		br:   bufio.NewReader(udpConn),
-		bw:   bufio.NewWriter(udpConn),
+		Conn:  conn,
+		ssmap: SessionMap{},
 	}
 }
 
-func (s *Server) Read() (net.Addr, []byte, error) {
-	size := s.br.Size()
-	b := make([]byte, size)
-	_, raddr, err := s.conn.ReadFrom(b)
-	if err != nil {
-		return nil, nil, err
+func (s *Server) AddSession(raddr string) {
+	if _, ok := s.ssmap[raddr]; !ok {
+		// NOTE: ここのあたりが微妙
+		s.ssmap[raddr] = &Session{
+			br:    nil,
+			bw:    nil,
+			state: "init",
+		}
 	}
-	return raddr, b, nil
 }
 
-func (s *Server) Write(b []byte, raddr net.Addr) error {
-	_, err := s.conn.WriteTo(b, raddr)
-	if err != nil {
-		return err
+func (s *Server) Run() error {
+	for {
+		b := make([]byte, 1024)
+		_, ra, err := s.Conn.ReadFrom(b)
+		if err != nil {
+			return err
+		}
+		raddr := ra.String()
+		s.AddSession(raddr)
+
+		log.Print(string(b))
+
+		//err = s.ssmap[raddr].Write([]byte("Hello?")) // NOTE: panic: write udp 127.0.0.1:5060: write: destination address required
+		_, err = s.Conn.WriteTo([]byte("Hello?"), ra)
+		if err != nil {
+			panic(err)
+		}
 	}
-	return nil
 }
