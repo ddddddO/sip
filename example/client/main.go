@@ -12,8 +12,6 @@ func main() {
 	session := sip.NewSession(raddr)
 	defer session.Close()
 
-	log.Print("send to server")
-
 	client := sip.NewClient()
 	client.AddSession(raddr, session)
 

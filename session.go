@@ -37,6 +37,10 @@ func NewSession(raddr string) *Session {
 	}
 }
 
+func (ss *Session) GetState() State {
+	return ss.state
+}
+
 func (ss *Session) ChangeState(state State) {
 	ss.state = state
 }

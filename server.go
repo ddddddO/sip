@@ -43,15 +43,25 @@ func (s *Server) Run() error {
 			return err
 		}
 		raddr := ra.String()
-		s.AddSession(raddr)
+		s.AddSession(raddr) // TODO: 既にセッションが存在するかチェックを関数に切り出すか考える
 
-		log.Print(string(b))
+		log.Printf("debug\n%s", string(b))
 
-		if isValidINVITERequest(b) {
-			s.Conn.WriteTo([]byte("response code 2XX"), ra)
-			s.ssmap[raddr].ChangeState(StateOK)
-		} else {
-			s.Conn.WriteTo([]byte("response code 4XX"), ra)
+		switch s.ssmap[raddr].GetState() {
+		case StateINIT:
+			s.ssmap[raddr].ChangeState(StateRINGING)
+
+			// TODO: Add 180 Ringing response to uac
+
+			if isValidINVITERequest(b) {
+				s.Conn.WriteTo([]byte("response code 2XX"), ra)
+				s.ssmap[raddr].ChangeState(StateOK)
+			} else {
+				s.Conn.WriteTo([]byte("response code 4XX"), ra)
+			}
+		case StateOK:
+			// if ack?
+			// true -> ChangeState(connected)
 		}
 
 		//err = s.ssmap[raddr].Write([]byte("Hello?")) // NOTE: panic: write udp 127.0.0.1:5060: write: destination address required
