@@ -1,5 +1,9 @@
 package sip
 
+import (
+	"bytes"
+)
+
 func buildResponseRINGING() []byte {
 	var b []byte
 	b = append(b, []byte("SIP/2.0 180 Ringing\r\n")...) // 1xx: Provisional -- request received, continuing to process the request;
@@ -27,4 +31,26 @@ func buildResponseOK() []byte {
 	b = append(b, []byte("Content-Length: 131\r\n")...)
 
 	return b
+}
+
+// 一旦、180のみtrue
+func isValidStatusCode1XX(b []byte) bool {
+	responseMsg := bytes.Split(b, []byte("\r\n"))[0]
+	splited := bytes.Split(responseMsg, []byte(" "))
+
+	if !bytes.Equal(splited[1], []byte("180")) {
+		return false
+	}
+	return true
+}
+
+// 一旦、200のみtrue
+func isValidStatusCode2XX(b []byte) bool {
+	responseMsg := bytes.Split(b, []byte("\r\n"))[0]
+	splited := bytes.Split(responseMsg, []byte(" "))
+
+	if !bytes.Equal(splited[1], []byte("200")) {
+		return false
+	}
+	return true
 }

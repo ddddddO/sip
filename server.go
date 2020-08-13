@@ -58,11 +58,17 @@ func (s *Server) Run() error {
 				s.Conn.WriteTo(okRes, ra)
 				s.ssmap[raddr].ChangeState(StateOK)
 			} else {
-				s.Conn.WriteTo([]byte("response code 4XX"), ra)
+				s.Conn.WriteTo([]byte("response code 4XX"), ra) // TODO: 4XX response
 			}
 		case StateOK:
-			// if ack?
-			// true -> ChangeState(connected)
+			if isValidRequestACK(b) {
+				s.ssmap[raddr].ChangeState(StateCONNECTED)
+				log.Printf("\nremote address: %s\nstatus: %s",
+					raddr,
+					s.ssmap[raddr].GetState())
+			} else {
+				s.Conn.WriteTo([]byte("response code 4XX"), ra) // TODO: 4XX response
+			}
 		}
 
 		//err = s.ssmap[raddr].Write([]byte("Hello?")) // NOTE: panic: write udp 127.0.0.1:5060: write: destination address required
