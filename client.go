@@ -1,7 +1,6 @@
 package sip
 
 import (
-	"log"
 	"sync"
 )
 
@@ -44,6 +43,7 @@ CONNECTED:
 	for {
 		switch c.ssmap[raddr].GetState() {
 		case StateINIT:
+			LogInfo(raddr, c.ssmap[raddr])
 			inviteReq := buildRequestINVITE()
 			c.ssmap[raddr].Write(inviteReq)
 			c.ssmap[raddr].ChangeState(StateINVITE)
@@ -52,7 +52,6 @@ CONNECTED:
 			if err != nil {
 				errCh <- err
 			}
-			log.Printf("debug\n%s", string(res))
 			if !isValidStatusCode1XX(res) {
 				// TODO: ...
 			}
@@ -61,7 +60,7 @@ CONNECTED:
 			if err != nil {
 				errCh <- err
 			}
-			log.Printf("debug\n%s", string(res))
+			LogInfo(raddr, c.ssmap[raddr])
 			if isValidStatusCode2XX(res) {
 				ackReq := buildRequestACK()
 				c.ssmap[raddr].Write(ackReq)
@@ -70,10 +69,7 @@ CONNECTED:
 				// TODO: ...
 			}
 		case StateCONNECTED:
-			log.Printf("\nremote address: %s\nstatus: %s",
-				raddr,
-				c.ssmap[raddr].GetState())
-
+			LogInfo(raddr, c.ssmap[raddr])
 			break CONNECTED
 		}
 	}

@@ -1,7 +1,6 @@
 package sip
 
 import (
-	"log"
 	"net"
 )
 
@@ -44,7 +43,7 @@ func (s *Server) Run() error {
 		raddr := ra.String()
 		s.AddSession(raddr) // TODO: 既にセッションが存在するかチェックを関数に切り出すか考える
 
-		log.Printf("debug\n%s", string(b))
+		LogInfo(raddr, s.ssmap[raddr])
 
 		switch s.ssmap[raddr].GetState() {
 		case StateINIT:
@@ -52,29 +51,33 @@ func (s *Server) Run() error {
 
 			ringingRes := buildResponseRINGING()
 			s.Conn.WriteTo(ringingRes, ra)
+			//err = s.ssmap[raddr].Write([]byte("Hello?")) // NOTE: panic: write udp 127.0.0.1:5060: write: destination address required
 
 			if isValidRequestINVITE(b) {
 				okRes := buildResponseOK()
 				s.Conn.WriteTo(okRes, ra)
 				s.ssmap[raddr].ChangeState(StateOK)
 			} else {
-				s.Conn.WriteTo([]byte("response code 4XX"), ra) // TODO: 4XX response
+				s.Conn.WriteTo([]byte("response code 4XX\r\n"), ra) // TODO: 4XX response
+			}
+		case StateRINGING:
+			if isValidRequestINVITE(b) {
+				okRes := buildResponseOK()
+				s.Conn.WriteTo(okRes, ra)
+				s.ssmap[raddr].ChangeState(StateOK)
+			} else {
+				s.Conn.WriteTo([]byte("response code 4XX\r\n"), ra) // TODO: 4XX response
 			}
 		case StateOK:
 			if isValidRequestACK(b) {
 				s.ssmap[raddr].ChangeState(StateCONNECTED)
-				log.Printf("\nremote address: %s\nstatus: %s",
-					raddr,
-					s.ssmap[raddr].GetState())
+				LogInfo(raddr, s.ssmap[raddr])
 			} else {
-				s.Conn.WriteTo([]byte("response code 4XX"), ra) // TODO: 4XX response
+				s.Conn.WriteTo([]byte("response code 4XX\r\n"), ra) // TODO: 4XX response
 			}
-		}
-
-		//err = s.ssmap[raddr].Write([]byte("Hello?")) // NOTE: panic: write udp 127.0.0.1:5060: write: destination address required
-		_, err = s.Conn.WriteTo([]byte("Hello?"), ra)
-		if err != nil {
-			panic(err)
+		case StateCONNECTED:
+			// TODO: ...
+			LogInfo(raddr, s.ssmap[raddr])
 		}
 	}
 }
