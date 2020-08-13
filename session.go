@@ -30,8 +30,8 @@ func NewSession(raddr string) *Session {
 
 	return &Session{
 		conn: udpConn,
-		br:   bufio.NewReader(conn),
-		bw:   bufio.NewWriter(conn),
+		br:   bufio.NewReader(udpConn),
+		bw:   bufio.NewWriter(udpConn),
 
 		state: StateINIT,
 	}
