@@ -21,14 +21,14 @@ func (c *Client) AddSession(raddr string, session *Session) {
 }
 
 func (c *Client) Run() error {
-	for key := range c.ssmap {
-		switch c.ssmap[key].GetState() {
+	for raddr := range c.ssmap {
+		switch c.ssmap[raddr].GetState() {
 		case StateINIT:
 			inviteReq := c.buildRequestINVITE()
-			c.ssmap[key].Write(inviteReq)
-			c.ssmap[key].ChangeState(StateINVITE)
+			c.ssmap[raddr].Write(inviteReq)
+			c.ssmap[raddr].ChangeState(StateINVITE)
 
-			b, err := c.ssmap[key].Read()
+			b, err := c.ssmap[raddr].Read()
 			if err != nil {
 				return err
 			}

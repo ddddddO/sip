@@ -73,15 +73,28 @@ func (s *Server) Run() error {
 }
 
 var (
+	space  = []byte(" ")
 	end    = []byte("\r\n")
 	method = []byte("INVITE")
 )
 
-// NOTE: 一旦ヘッダーが妥当かチェック
 func isValidINVITERequest(b []byte) bool {
-	requestLine := bytes.Split(b, end)[0]
-	splited := bytes.Split(requestLine, []byte(" "))
+	requestMsg := bytes.Split(b, end)
+	// check request line
+	if !isValidRequestLine(requestMsg[0]) {
+		return false
+	}
 
+	// check request header
+	if !isValidRequestHeader(requestMsg[1:]) {
+		return false
+	}
+
+	return true
+}
+
+func isValidRequestLine(requestLine []byte) bool {
+	splited := bytes.Split(requestLine, space)
 	if len(splited) != 3 {
 		return false
 	}
@@ -93,5 +106,11 @@ func isValidINVITERequest(b []byte) bool {
 
 	// TODO:check SIP-Version
 
+	return true
+}
+
+func isValidRequestHeader(requestHeaders [][]byte) bool {
+	// TODO: check Via/To/From/Call-ID/CSeq/Contact/Max-Forwards/Content-Type/Content-Length
+	// 「This example contains a minimum required set.」最低限のヘッダのよう
 	return true
 }
