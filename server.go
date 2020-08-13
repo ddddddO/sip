@@ -51,10 +51,12 @@ func (s *Server) Run() error {
 		case StateINIT:
 			s.ssmap[raddr].ChangeState(StateRINGING)
 
-			// TODO: Add 180 Ringing response to uac
+			ringingRes := s.buildResponseRINGING()
+			s.Conn.WriteTo(ringingRes, ra)
 
-			if isValidINVITERequest(b) {
-				s.Conn.WriteTo([]byte("response code 2XX"), ra)
+			if isValidRequestINVITE(b) {
+				okRes := s.buildResponseOK()
+				s.Conn.WriteTo(okRes, ra)
 				s.ssmap[raddr].ChangeState(StateOK)
 			} else {
 				s.Conn.WriteTo([]byte("response code 4XX"), ra)
@@ -72,16 +74,45 @@ func (s *Server) Run() error {
 	}
 }
 
+func (s *Server) buildResponseRINGING() []byte {
+	var b []byte
+	b = append(b, []byte("SIP/2.0 180 Ringing\r\n")...) // 1xx: Provisional -- request received, continuing to process the request;
+	b = append(b, []byte("Via: SIP/2.0/UDP server10.biloxi.com;branch=z9hG4bK4b43c2ff8.1;received=192.0.2.3\r\n")...)
+	b = append(b, []byte("To: Bob <sip:bob@biloxi.com>;tag=a6c85cf\r\n")...)
+	b = append(b, []byte("From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n")...)
+	b = append(b, []byte("Call-ID: a84b4c76e66710\r\n")...)
+	b = append(b, []byte("Contact: <sip:bob@192.0.2.4>\r\n")...)
+	b = append(b, []byte("CSeq: 314159 INVITE\r\n")...)
+	b = append(b, []byte("Content-Length: 0\r\n")...)
+
+	return b
+}
+
+func (s *Server) buildResponseOK() []byte {
+	var b []byte
+	b = append(b, []byte("SIP/2.0 200 OK\r\n")...)
+	b = append(b, []byte("Via: SIP/2.0/UDP server10.biloxi.com;branch=z9hG4bK4b43c2ff8.1;received=192.0.2.3\r\n")...)
+	b = append(b, []byte("To: Bob <sip:bob@biloxi.com>;tag=a6c85cf\r\n")...)
+	b = append(b, []byte("From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n")...)
+	b = append(b, []byte("Call-ID: a84b4c76e66710\r\n")...)
+	b = append(b, []byte("CSeq: 314159 INVITE\r\n")...)
+	b = append(b, []byte("Contact: <sip:bob@192.0.2.4>\r\n")...)
+	b = append(b, []byte("Content-Type: application/sdp\r\n")...)
+	b = append(b, []byte("Content-Length: 131\r\n")...)
+
+	return b
+}
+
 var (
-	space  = []byte(" ")
-	end    = []byte("\r\n")
-	method = []byte("INVITE")
+	space        = []byte(" ")
+	end          = []byte("\r\n")
+	methodINVITE = []byte("INVITE")
 )
 
-func isValidINVITERequest(b []byte) bool {
+func isValidRequestINVITE(b []byte) bool {
 	requestMsg := bytes.Split(b, end)
 	// check request line
-	if !isValidRequestLine(requestMsg[0]) {
+	if !isValidRequestLine(requestMsg[0], methodINVITE) {
 		return false
 	}
 
@@ -93,7 +124,7 @@ func isValidINVITERequest(b []byte) bool {
 	return true
 }
 
-func isValidRequestLine(requestLine []byte) bool {
+func isValidRequestLine(requestLine, method []byte) bool {
 	splited := bytes.Split(requestLine, space)
 	if len(splited) != 3 {
 		return false

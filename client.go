@@ -32,7 +32,7 @@ func (c *Client) Run() error {
 			if err != nil {
 				return err
 			}
-			log.Print(string(b))
+			log.Printf("debug\n%s", string(b))
 		}
 	}
 	return nil
