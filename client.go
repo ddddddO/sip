@@ -55,3 +55,17 @@ func (c *Client) buildRequestINVITE() []byte {
 
 	return b
 }
+
+func (c *Client) buildRequestACK() []byte {
+	var b []byte
+	b = append(b, []byte("ACK sip:bob@192.0.2.4 SIP/2.0")...)
+	b = append(b, []byte("Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds9")...)
+	b = append(b, []byte("Max-Forwards: 70")...)
+	b = append(b, []byte("To: Bob <sip:bob@biloxi.com>;tag=a6c85cf")...)
+	b = append(b, []byte("From: Alice <sip:alice@atlanta.com>;tag=1928301774")...)
+	b = append(b, []byte("Call-ID: a84b4c76e66710")...)
+	b = append(b, []byte("CSeq: 314159 ACK")...)
+	b = append(b, []byte("Content-Length: 0")...)
+
+	return b
+}

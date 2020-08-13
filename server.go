@@ -103,6 +103,20 @@ func (s *Server) buildResponseOK() []byte {
 	return b
 }
 
+func (s *Server) buildRequestBYE() []byte {
+	var b []byte
+	b = append(b, []byte("BYE sip:alice@pc33.atlanta.com SIP/2.0")...)
+	b = append(b, []byte("Via: SIP/2.0/UDP 192.0.2.4;branch=z9hG4bKnashds10")...)
+	b = append(b, []byte("Max-Forwards: 70")...)
+	b = append(b, []byte("From: Bob <sip:bob@biloxi.com>;tag=a6c85cf")...)
+	b = append(b, []byte("To: Alice <sip:alice@atlanta.com>;tag=1928301774")...)
+	b = append(b, []byte("Call-ID: a84b4c76e66710")...)
+	b = append(b, []byte("CSeq: 231 BYE")...)
+	b = append(b, []byte("Content-Length: 0")...)
+
+	return b
+}
+
 var (
 	space        = []byte(" ")
 	end          = []byte("\r\n")
