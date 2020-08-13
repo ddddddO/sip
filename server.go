@@ -11,6 +11,9 @@ type Server struct {
 
 func NewServer(laddr string) *Server {
 	resolvedLaddr, err := net.ResolveUDPAddr("udp", laddr)
+	if err != nil {
+		panic(err)
+	}
 	conn, err := net.ListenUDP("udp", resolvedLaddr)
 	if err != nil {
 		panic(err)
@@ -22,26 +25,42 @@ func NewServer(laddr string) *Server {
 	}
 }
 
-func (s *Server) AddSession(raddr string) {
-	if _, ok := s.ssmap[raddr]; !ok {
+func (s *Server) existSession(raddr string) bool {
+	_, ok := s.ssmap[raddr]
+	return ok
+}
+
+func (s *Server) AddSession(ra *net.UDPAddr) {
+	raddr := ra.String()
+	if !s.existSession(raddr) {
 		// NOTE: ここのあたりが微妙
 		s.ssmap[raddr] = &Session{
+			raddr: ra,
+			conn:  s.Conn,
 			br:    nil,
 			bw:    nil,
-			state: StateINIT,
+
+			state:      StateINIT,
+			originType: OriginServer,
 		}
 	}
 }
 
-func (s *Server) Run() error {
+// FIXME: clientCnt: 苦肉の策。綺麗ではないし、不便
+func (s *Server) Run(connectedSessionCh chan<- *Session, clientCnt int) error {
+	var connectedCnt int
 	for {
+		if connectedCnt == clientCnt {
+			break
+		}
+
 		b := make([]byte, 1024)
-		_, ra, err := s.Conn.ReadFrom(b)
+		_, ra, err := s.Conn.ReadFromUDP(b)
 		if err != nil {
 			return err
 		}
 		raddr := ra.String()
-		s.AddSession(raddr) // TODO: 既にセッションが存在するかチェックを関数に切り出すか考える
+		s.AddSession(ra) // TODO: 既にセッションが存在するかチェックを関数に切り出すか考える
 
 		LogInfo(raddr, s.ssmap[raddr])
 
@@ -50,34 +69,39 @@ func (s *Server) Run() error {
 			s.ssmap[raddr].ChangeState(StateRINGING)
 
 			ringingRes := buildResponseRINGING()
-			s.Conn.WriteTo(ringingRes, ra)
+			if err := s.ssmap[raddr].Write(ringingRes); err != nil {
+				return err
+			}
 			//err = s.ssmap[raddr].Write([]byte("Hello?")) // NOTE: panic: write udp 127.0.0.1:5060: write: destination address required
 
 			if isValidRequestINVITE(b) {
 				okRes := buildResponseOK()
-				s.Conn.WriteTo(okRes, ra)
+				s.ssmap[raddr].Write(okRes)
 				s.ssmap[raddr].ChangeState(StateOK)
 			} else {
-				s.Conn.WriteTo([]byte("response code 4XX\r\n"), ra) // TODO: 4XX response
+				s.ssmap[raddr].Write([]byte("response code 4XX\r\n")) // TODO: 4XX response
 			}
 		case StateRINGING:
 			if isValidRequestINVITE(b) {
 				okRes := buildResponseOK()
-				s.Conn.WriteTo(okRes, ra)
+				s.ssmap[raddr].Write(okRes)
 				s.ssmap[raddr].ChangeState(StateOK)
 			} else {
-				s.Conn.WriteTo([]byte("response code 4XX\r\n"), ra) // TODO: 4XX response
+				s.ssmap[raddr].Write([]byte("response code 4XX\r\n")) // TODO: 4XX response
 			}
 		case StateOK:
 			if isValidRequestACK(b) {
 				s.ssmap[raddr].ChangeState(StateCONNECTED)
 				LogInfo(raddr, s.ssmap[raddr])
+				connectedCnt++
+				connectedSessionCh <- s.ssmap[raddr]
 			} else {
-				s.Conn.WriteTo([]byte("response code 4XX\r\n"), ra) // TODO: 4XX response
+				s.ssmap[raddr].Write([]byte("response code 4XX\r\n")) // TODO: 4XX response
 			}
 		case StateCONNECTED:
-			// TODO: ...
+			// TODO: ... when BYE req ?
 			LogInfo(raddr, s.ssmap[raddr])
 		}
 	}
+	return nil
 }

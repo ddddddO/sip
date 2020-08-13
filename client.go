@@ -20,13 +20,13 @@ func (c *Client) AddSession(raddr string, session *Session) {
 	}
 }
 
-func (c *Client) Run() error {
+func (c *Client) Run(connectedSessionCh chan<- *Session) error {
 	errCh := make(chan error)
 
 	wg := &sync.WaitGroup{}
 	for raddr := range c.ssmap {
 		wg.Add(1)
-		go c.run(raddr, wg, errCh)
+		go c.run(raddr, wg, connectedSessionCh, errCh)
 
 	}
 	wg.Wait()
@@ -38,7 +38,7 @@ func (c *Client) Run() error {
 	return nil
 }
 
-func (c *Client) run(raddr string, wg *sync.WaitGroup, errCh chan<- error) {
+func (c *Client) run(raddr string, wg *sync.WaitGroup, connectedSessionCh chan<- *Session, errCh chan<- error) {
 CONNECTED:
 	for {
 		switch c.ssmap[raddr].GetState() {
@@ -65,6 +65,7 @@ CONNECTED:
 				ackReq := buildRequestACK()
 				c.ssmap[raddr].Write(ackReq)
 				c.ssmap[raddr].ChangeState(StateCONNECTED)
+				connectedSessionCh <- c.ssmap[raddr]
 			} else {
 				// TODO: ...
 			}
