@@ -24,7 +24,7 @@ func (c *Client) Run() error {
 	for raddr := range c.ssmap {
 		switch c.ssmap[raddr].GetState() {
 		case StateINIT:
-			inviteReq := c.buildRequestINVITE()
+			inviteReq := buildRequestINVITE()
 			c.ssmap[raddr].Write(inviteReq)
 			c.ssmap[raddr].ChangeState(StateINVITE)
 
@@ -36,36 +36,4 @@ func (c *Client) Run() error {
 		}
 	}
 	return nil
-}
-
-// https://tools.ietf.org/html/rfc3261#section-7.1
-func (c *Client) buildRequestINVITE() []byte {
-	var b []byte
-	b = append(b, []byte("INVITE sip:bob@biloxi.com SIP/2.0\r\n")...)
-	// NOTE: ヘッダーに\r\nは必要でよい？
-	b = append(b, []byte("Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bK776asdhds\r\n")...)
-	b = append(b, []byte("Max-Forwards: 70\r\n")...)
-	b = append(b, []byte("To: Bob <sip:bob@biloxi.com>\r\n")...)
-	b = append(b, []byte("From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n")...)
-	b = append(b, []byte("Call-ID: a84b4c76e66710@pc33.atlanta.com\r\n")...)
-	b = append(b, []byte("CSeq: 314159 INVITE\r\n")...)
-	b = append(b, []byte("Contact: <sip:alice@pc33.atlanta.com>\r\n")...)
-	b = append(b, []byte("Content-Type: application/sdp\r\n")...)
-	b = append(b, []byte("Content-Length: 142\r\n")...)
-
-	return b
-}
-
-func (c *Client) buildRequestACK() []byte {
-	var b []byte
-	b = append(b, []byte("ACK sip:bob@192.0.2.4 SIP/2.0")...)
-	b = append(b, []byte("Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds9")...)
-	b = append(b, []byte("Max-Forwards: 70")...)
-	b = append(b, []byte("To: Bob <sip:bob@biloxi.com>;tag=a6c85cf")...)
-	b = append(b, []byte("From: Alice <sip:alice@atlanta.com>;tag=1928301774")...)
-	b = append(b, []byte("Call-ID: a84b4c76e66710")...)
-	b = append(b, []byte("CSeq: 314159 ACK")...)
-	b = append(b, []byte("Content-Length: 0")...)
-
-	return b
 }
