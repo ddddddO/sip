@@ -30,6 +30,7 @@ func (c *Client) Run(connectedSessionCh chan<- *Session) error {
 
 	}
 	wg.Wait()
+	close(connectedSessionCh)
 
 	if len(errCh) > 0 {
 		return <-errCh

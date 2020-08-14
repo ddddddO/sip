@@ -51,6 +51,7 @@ func (s *Server) Run(connectedSessionCh chan<- *Session, clientCnt int) error {
 	var connectedCnt int
 	for {
 		if connectedCnt == clientCnt {
+			close(connectedSessionCh)
 			break
 		}
 
@@ -60,7 +61,7 @@ func (s *Server) Run(connectedSessionCh chan<- *Session, clientCnt int) error {
 			return err
 		}
 		raddr := ra.String()
-		s.AddSession(ra) // TODO: 既にセッションが存在するかチェックを関数に切り出すか考える
+		s.AddSession(ra)
 
 		LogInfo(raddr, s.ssmap[raddr])
 
