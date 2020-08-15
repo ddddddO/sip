@@ -77,3 +77,9 @@ CONNECTED:
 	}
 	wg.Done()
 }
+
+func (c *Client) Close() {
+	for raddr := range c.ssmap {
+		c.ssmap[raddr].Close()
+	}
+}
