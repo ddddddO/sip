@@ -70,7 +70,7 @@ func (s *Server) Run(connectedSessionCh chan<- *Session, clientCnt int) error {
 			s.ssmap[raddr].ChangeState(StateRINGING)
 
 			ringingRes := buildResponseRINGING()
-			if err := s.ssmap[raddr].Write(ringingRes); err != nil {
+			if _, err := s.ssmap[raddr].Write(ringingRes); err != nil {
 				return err
 			}
 			//err = s.ssmap[raddr].Write([]byte("Hello?")) // NOTE: panic: write udp 127.0.0.1:5060: write: destination address required

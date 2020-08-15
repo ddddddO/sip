@@ -22,9 +22,12 @@ func main() {
 	for i := range availableSessions {
 		wg.Add(1)
 		go func(ss *sip.Session) {
-			ss.Write([]byte("Hello by ua_1"))
+			if _, err := ss.Write([]byte("Hello by ua_1")); err != nil {
+				panic(err)
+			}
 
-			res, err := ss.Read()
+			res := make([]byte, 1024)
+			_, err := ss.Read(res)
 			if err != nil {
 				panic(err)
 			}

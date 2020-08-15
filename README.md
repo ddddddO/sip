@@ -5,31 +5,70 @@ go get github.com/ddddddO/sip
 ```
 
 ## Usage  
+### Server  
 ```go
 
 import (
-    "github.com/ddddddO/sip"
+	"io"
+	"log"
+	"os"
+
+	"github.com/ddddddO/sip"
 )
 
 func XXXXX() {
+	enableServer := true
+	enableClient := false
+	laddr := "localhost:5060"
+	clientCnt := 1
 	availableSessions := sip.GetAvailableSessions(sip.NewConfig(
-		true, laddr, clientCnt, // for SIP Server setup config.
-		true, raddrs, // for SIP Client setup config.
+		enableServer, laddr, clientCnt, // for Server setup
+		enableClient, nil, // for Client setup
+	))
+
+	for i := range availableSessions {
+		func(ss *sip.Session) {
+			// send to client
+			if _, err := ss.Write([]byte("Hello! by server..\n")); err != nil {
+				panic(err)
+			}
+
+			// recieve from client
+			io.Copy(os.Stdout, ss)
+		}(availableSessions[i])
+	}
+}
+```
+
+### Client  
+
+```go
+import (
+	"io"
+	"log"
+	"os"
+
+	"github.com/ddddddO/sip"
+)
+
+func YYYYY() {
+	enableServer := false
+	enableClient := true
+	raddrs := []string{"localhost:5060"}
+	availableSessions := sip.GetAvailableSessions(sip.NewConfig(
+		enableServer, "", 0, // for Server setup
+		enableClient, raddrs, // for Client setup
 	))
 
 	for i := range availableSessions {
 		func(ss *sip.Session) {
 			// send to server
-			if err := ss.Write([]byte("sending to server")); err != nil {
+			if _, err := ss.Write([]byte("Hey! by client!\n")); err != nil {
 				panic(err)
 			}
 
 			// recieve from server
-			res, err := ss.Read()
-			if err != nil {
-				panic(err)
-			}
-			log.Print(string(res))
+			io.Copy(os.Stdout, ss)
 		}(availableSessions[i])
 	}
 }

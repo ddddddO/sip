@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io"
 	"log"
+	"os"
 
 	"github.com/ddddddO/sip"
 )
@@ -19,16 +21,12 @@ func main() {
 	for i := range availableSessions {
 		func(ss *sip.Session) {
 			// send to client
-			if err := ss.Write([]byte("Hello! by server..")); err != nil {
+			if _, err := ss.Write([]byte("Hello! by server..\n")); err != nil {
 				panic(err)
 			}
 
 			// recieve from client
-			b, err := ss.Read()
-			if err != nil {
-				panic(err)
-			}
-			log.Print(string(b))
+			io.Copy(os.Stdout, ss)
 		}(availableSessions[i])
 	}
 }

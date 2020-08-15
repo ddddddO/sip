@@ -66,48 +66,45 @@ func (ss *Session) ChangeState(state State) {
 	ss.state = state
 }
 
-func (ss *Session) Read() ([]byte, error) {
+func (ss *Session) Read(buf []byte) (int, error) {
 	if ss.originType == OriginClient {
 		if ss.br == nil {
-			return nil, errors.New("can't access")
+			return 0, errors.New("can't access")
 		}
-		size := ss.br.Size()
-		buf := make([]byte, size)
 
-		_, err := ss.br.Read(buf)
+		n, err := ss.br.Read(buf)
 		if err != nil {
-			return nil, err
+			return n, err
 		}
-		return buf, nil
+		return n, nil
 	} else if ss.originType == OriginServer {
-		buf := make([]byte, 1024)
-		_, _, err := ss.conn.ReadFrom(buf)
+		n, _, err := ss.conn.ReadFrom(buf)
 		if err != nil {
-			return nil, err
+			return n, err
 		}
-		return buf, nil
+		return n, nil
 	}
-	return nil, errors.New("undefined origin type")
+	return 0, errors.New("undefined origin type")
 }
 
-func (ss *Session) Write(b []byte) error {
+func (ss *Session) Write(b []byte) (int, error) {
 	if ss.originType == OriginClient {
 		if ss.bw == nil {
-			return errors.New("can't access")
+			return 0, errors.New("can't access")
 		}
-		_, err := ss.bw.Write(b)
+		n, err := ss.bw.Write(b)
 		if err != nil {
-			return err
+			return n, err
 		}
 		if err := ss.bw.Flush(); err != nil {
-			return err
+			return n, err
 		}
-		return nil
+		return n, nil
 	} else if ss.originType == OriginServer {
-		_, err := ss.conn.WriteTo(b, ss.raddr)
-		return err
+		n, err := ss.conn.WriteTo(b, ss.raddr)
+		return n, err
 	}
-	return errors.New("undefined origin type")
+	return 0, errors.New("undefined origin type")
 }
 
 func (ss *Session) Close() error {

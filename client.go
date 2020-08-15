@@ -49,7 +49,8 @@ CONNECTED:
 			c.ssmap[raddr].Write(inviteReq)
 			c.ssmap[raddr].ChangeState(StateINVITE)
 
-			res, err := c.ssmap[raddr].Read()
+			res := make([]byte, 1024)
+			_, err := c.ssmap[raddr].Read(res)
 			if err != nil {
 				errCh <- err
 			}
@@ -57,7 +58,8 @@ CONNECTED:
 				// TODO: ...
 			}
 		case StateINVITE:
-			res, err := c.ssmap[raddr].Read()
+			res := make([]byte, 1024)
+			_, err := c.ssmap[raddr].Read(res)
 			if err != nil {
 				errCh <- err
 			}
