@@ -82,6 +82,7 @@ github.com/ddddddO/sip/example/pattern1
 github.com/ddddddO/sip/example/pattern2
 
 ## Reference  
+- [SIPについて詳しい・わかりやすい](https://www.atmarkit.co.jp/ait/articles/0711/16/news146.html)  
 - [VoIPとSIP](https://www.nic.ad.jp/ja/newsletter/No29/100.html)
 - [rfc3261](https://tools.ietf.org/html/rfc3261)
 - [SIPリクエスト・レスポンス例](https://tools.ietf.org/html/rfc3261#section-24.2)
